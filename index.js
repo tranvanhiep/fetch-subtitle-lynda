@@ -50,23 +50,39 @@ readFileName
       }
 
       if (chapterId === prevChapterId) {
-        prevVideoId = videoId + chapterId + subChapterId;
+        prevVideoId = videoId + subChapterId;
       } else {
         prevChapterId = chapterId;
-        videoId = prevVideoId;
-        prevVideoId = videoId + chapterId + subChapterId;
+        videoId = prevVideoId + 1;
+        prevVideoId = videoId + subChapterId;
       }
-      console.log(prevVideoId);
 
       const chapterUrl = new URL(`${url}${prevVideoId}`);
 
       const getSubtitle = https.request(chapterUrl, res => {
         res.on('data', data => {
-          fs.writeFile(subtitlePath, data, err => {
-            if (err) {
-              throw err;
-            }
-          });
+          const dataObj = data
+            .toString()
+            .replace(/^\{(.+)\}$.*/g, '$1')
+            .trim()
+            .split(',')
+            .map(obj =>
+              obj
+                .replace(/\"(.+)\"/, '$1')
+                .split('=')
+                .map(prop => `"${prop.trim()}"`)
+                .join(':')
+            )
+            .join(',');
+          if (data.toString().length === 53) {
+            console.error(JSON.parse(`{${dataObj}}`).Message);
+          } else {
+            fs.writeFile(subtitlePath, data, err => {
+              if (err) {
+                throw err;
+              }
+            });
+          }
         });
       });
 
